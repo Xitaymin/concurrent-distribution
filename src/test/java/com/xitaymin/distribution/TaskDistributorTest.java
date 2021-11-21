@@ -21,11 +21,10 @@ class TaskDistributorTest {
 
         TaskDistributor taskDistributor = new TaskDistributor();
         taskDistributor.subscribe(subscriber);
-//        taskDistributor.startDistribution(task1);
         taskDistributor.submit(task);
         taskDistributor.subscribe(subscriber1);
         taskDistributor.submit(task1);
-        taskDistributor.stopDistribution();
+        taskDistributor.stop();
 
         assertEquals(subscriber.getReceivedMessages().size(), 2);
         assertEquals(subscriber.getReceivedMessages().size(), 1);

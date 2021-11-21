@@ -14,12 +14,6 @@ public class TaskDistributor {
     private final AtomicBoolean isStopped = new AtomicBoolean(false);
     private final List<Future<?>> unDoneFutures = new CopyOnWriteArrayList<>();
 
-//    private final Queue<DistributionTask> tasks = new LinkedBlockingQueue<>();
-//    private final ReadWriteLock readWriteLock = new ReentrantReadWriteLock();
-//    private final Lock readLock = readWriteLock.readLock();
-//    private final Lock writeLock = readWriteLock.writeLock();
-//    private final TaskProvider taskProvider;
-
     public void subscribe(Subscriber subscriber) {
         subscribers.add(subscriber);
     }
@@ -28,7 +22,7 @@ public class TaskDistributor {
         subscribers.remove(subscriber);
     }
 
-    public void startDistribution(DistributionTask task) {
+    public void submit(DistributionTask task) {
         Future<?> future = task.sentMessage(executorService, subscribers);
         if (!future.isDone()) {
             unDoneFutures.add(future);
@@ -43,13 +37,13 @@ public class TaskDistributor {
         });
     }
 
-    public void stopDistribution() {
+    public void stop() {
         isStopped.set(true);
     }
 
-    public void submit(DistributionTask task) {
-        startDistribution(task);
+    public void exit() {
+        stop();
+        executorService.shutdown();
     }
-
 
 }
