@@ -1,11 +1,7 @@
 package com.xitaymin.distribution;
 
 import java.util.List;
-import java.util.concurrent.CopyOnWriteArrayList;
-import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.ScheduledThreadPoolExecutor;
+import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 public class TaskDistributor {
@@ -13,15 +9,26 @@ public class TaskDistributor {
 
     private final ScheduledExecutorService executorService =
             Executors.newScheduledThreadPool(Runtime.getRuntime().availableProcessors());
-    private final AtomicBoolean isStopped = new AtomicBoolean(false);
+    private final AtomicBoolean isDistributionStopped = new AtomicBoolean(false);
     private final List<Future<?>> futures = new CopyOnWriteArrayList<>();
+    private final AtomicBoolean isProgramStopped = new AtomicBoolean(false);
 
     public TaskDistributor() {
         if (executorService instanceof ScheduledThreadPoolExecutor) {
             ((ScheduledThreadPoolExecutor) executorService).setRemoveOnCancelPolicy(true);
-            System.out.println("Everything should be fine");
         }
+        executorService.execute(() -> {
+            while (!isProgramStopped.get()) {
+                if (isDistributionStopped.get()) {
+                    for (Future<?> f : futures) {
+                        f.cancel(true);
+                        futures.remove(f);
+                    }
+                }
+            }
+        });
     }
+
 
     public void subscribe(Subscriber subscriber) {
         subscribers.add(subscriber);
@@ -31,25 +38,20 @@ public class TaskDistributor {
         subscribers.remove(subscriber);
     }
 
-    public void submit(DistributionTask task) {
-        Future<?> future = task.sentMessage(executorService, subscribers);
+    public void startDistribution(DistributionTask task) {
+        List<Subscriber> currentSubscriber = new CopyOnWriteArrayList<>(subscribers);
+        isDistributionStopped.set(false);
+        Future<?> future = task.sentMessage(executorService, currentSubscriber);
         futures.add(future);
-
-        executorService.execute(() -> {
-            while (!isStopped.get()) {
-            }
-            for (Future<?> f : futures) {
-                f.cancel(true);
-            }
-        });
     }
 
-    public void stop() {
-        isStopped.set(true);
+    public void stopDistribution() {
+        isDistributionStopped.set(true);
     }
 
     public void exit() {
-        stop();
+        stopDistribution();
+        isProgramStopped.set(true);
         executorService.shutdown();
     }
 

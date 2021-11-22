@@ -7,42 +7,56 @@ import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class TaskDistributorTest {
-    @Timeout(5000)
+    private final long periodInSeconds = 1;
+
+
+
+    @Timeout(periodInSeconds*4000)
     @Test
     void onlyInitialSubscribersGetAllMessages() {
         SubscriberImpl subscriber = new SubscriberImpl("First");
         SubscriberImpl subscriber1 = new SubscriberImpl("Second");
+        SubscriberImpl subscriber2 = new SubscriberImpl("Third");
 
-        long delayInSeconds = 2;
         DistributionTask deferredTask = new DeferredDistributionTask(() -> "Today is " + LocalDateTime.now(),
-                LocalDateTime.now().plus(delayInSeconds, ChronoUnit.SECONDS));
+                LocalDateTime.now().plus(periodInSeconds, ChronoUnit.SECONDS));
         DistributionTask instantTask = new InstantDistributionTask("Instant message");
 
 
         TaskDistributor taskDistributor = new TaskDistributor();
+
         taskDistributor.subscribe(subscriber);
-        taskDistributor.submit(instantTask);
+        taskDistributor.subscribe(subscriber2);
+        taskDistributor.unsubscribe(subscriber2);
+
+        taskDistributor.startDistribution(deferredTask);
+
         taskDistributor.subscribe(subscriber1);
-        taskDistributor.submit(deferredTask);
+
+        taskDistributor.startDistribution(instantTask);
+
         try {
-            Thread.sleep(delayInSeconds * 3000);
+            Thread.sleep(periodInSeconds * 3000);
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
-        taskDistributor.stop();
 
         assertEquals(subscriber.getReceivedMessages().size(), 2);
         assertEquals(subscriber1.getReceivedMessages().size(), 1);
+        assertTrue(subscriber2.getReceivedMessages().isEmpty());
 
+
+//        taskDistributor.exit();
     }
 
-    @Timeout(5000)
+    @Timeout(periodInSeconds*4000)
     @Test()
     void subscribersDontReceiveMessagesWhenStopped() throws InterruptedException {
         SubscriberImpl subscriber = new SubscriberImpl("Subscriber");
-        long periodInSeconds = 2;
+
 
         DistributionTask periodicalTask =
                 new PeriodicalDistributionTask(() -> "Next message will be sent in " + LocalDateTime.now()
@@ -51,18 +65,25 @@ class TaskDistributorTest {
                 LocalDateTime.now().plus(periodInSeconds, ChronoUnit.SECONDS));
 
         TaskDistributor taskDistributor = new TaskDistributor();
+
         taskDistributor.subscribe(subscriber);
-        taskDistributor.submit(periodicalTask);
-        taskDistributor.submit(deferredTask);
-        taskDistributor.stop();
+
+        taskDistributor.startDistribution(periodicalTask);
+        taskDistributor.startDistribution(deferredTask);
+
+        taskDistributor.stopDistribution();
 
         Thread.sleep(periodInSeconds * 3000);
 
-        DistributionTask instantTask = new InstantDistributionTask("Instant message");
-
-        taskDistributor.submit(instantTask);
         System.out.println(subscriber.getReceivedMessages());
+        assertTrue(subscriber.getReceivedMessages().isEmpty());
 
-        assertEquals(subscriber.getReceivedMessages().size(), 2);
+//        taskDistributor.exit();
+
+    }
+
+    @Test
+    void newMessagesCanBeReceivedAfterStop(){
+        SubscriberImpl subscriber = new SubscriberImpl("Subscriber");
     }
 }
