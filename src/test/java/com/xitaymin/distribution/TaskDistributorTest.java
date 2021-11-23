@@ -76,14 +76,37 @@ class TaskDistributorTest {
         Thread.sleep(periodInSeconds * 3000);
 
         System.out.println(subscriber.getReceivedMessages());
-        assertTrue(subscriber.getReceivedMessages().isEmpty());
+        //first periodical message will be send with 0 delay
+        assertTrue(subscriber.getReceivedMessages().size() <= 1);
 
 //        taskDistributor.exit();
 
     }
 
     @Test
-    void newMessagesCanBeReceivedAfterStop(){
+    void newMessagesCanBeReceivedAfterStop() throws InterruptedException {
+
         SubscriberImpl subscriber = new SubscriberImpl("Subscriber");
+
+//        DistributionTask periodicalTask =
+//                new PeriodicalDistributionTask(() -> "Next message will be sent in " + LocalDateTime.now()
+//                        .plus(periodInSeconds, ChronoUnit.SECONDS), periodInSeconds);
+        DistributionTask deferredTask = new DeferredDistributionTask(() -> "Today is " + LocalDateTime.now(),
+                LocalDateTime.now().plus(periodInSeconds, ChronoUnit.SECONDS));
+
+        TaskDistributor taskDistributor = new TaskDistributor();
+        taskDistributor.subscribe(subscriber);
+        taskDistributor.startDistribution(deferredTask);
+        taskDistributor.stopDistribution();
+
+        DistributionTask instantTask = new InstantDistributionTask("Instant message");
+        taskDistributor.startDistribution(instantTask);
+
+        Thread.sleep(periodInSeconds * 3000);
+
+        taskDistributor.stopDistribution();
+
+        assertEquals(subscriber.getReceivedMessages().size(), 1);
+
     }
 }
