@@ -4,11 +4,9 @@ import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 public class SubscriberImpl implements Subscriber {
-    private final String name;
     private final List<String> receivedMessages = new CopyOnWriteArrayList<>();
 
-    public SubscriberImpl(String name) {
-        this.name = name;
+    public SubscriberImpl() {
     }
 
     public List<String> getReceivedMessages() {

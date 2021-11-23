@@ -11,10 +11,6 @@ public class InstantDistributionTask implements DistributionTask {
         this.message = message;
     }
 
-    public String getMessage() {
-        return message;
-    }
-
     @Override
     public Future<?> sentMessage(ScheduledExecutorService executorService, List<Subscriber> subscribers) {
         return executorService.submit(() -> {

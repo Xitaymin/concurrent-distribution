@@ -26,9 +26,4 @@ public class DeferredDistributionTask implements DistributionTask {
         }, LocalDateTime.now().until(sendingTime, ChronoUnit.SECONDS), TimeUnit.SECONDS);
     }
 
-    public Supplier<String> getMessageSupplier() {
-        return messageSupplier;
-    }
-
-
 }
